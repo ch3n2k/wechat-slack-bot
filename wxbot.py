@@ -328,6 +328,7 @@ class WXBot:
         r = self.session.post(url, data=json.dumps(params))
         r.encoding = 'utf-8'
         dic = json.loads(r.text)
+        print dic
         #print dic['ContactList']
         return dic['ContactList']
 

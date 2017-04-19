@@ -1,0 +1,5 @@
+slackbot
+requests
+pyqrcode
+pypng
+Pillow
