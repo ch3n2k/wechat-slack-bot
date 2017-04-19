@@ -69,4 +69,6 @@ qr.png
 /*.jpg
 *.ini
 *.un~
-/temp
+temp
+config.yaml
+.venv
