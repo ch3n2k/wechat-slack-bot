@@ -1,3 +1,4 @@
+import logging
 from slackbot.bot import respond_to
 from slackbot.bot import listen_to
 import re
@@ -7,22 +8,50 @@ from slackbot.dispatcher import Message
 from slackbot.slackclient import Channel
 
 from wxbot_slack import wxbot
+import yaml
+import requests
 
-config=yaml.load(file('config.yaml').read())
+config = yaml.load(file('config.yaml').read())
 slack_wechat_map = dict((x, w) for w, x in config['bindings'].iteritems())
+logging.info( "channel mapping configuration:")
+for k, v in slack_wechat_map.iteritems():
+    logging.info("%s <> %s", k, v )
 
+class FileDownloadException(Exception): pass
+
+def download_file(url, filepath):
+    resp = requests.get(url, headers={'Authorization': 'Bearer ' + config['slack_token']})
+    if resp.status_code == 200:
+        with file(filepath, 'w') as f:
+            f.write(resp.content)
+    else:
+        raise FileDownloadException()
+        
+        
+    
 @listen_to('.*')
 def any_message(message):
-    print message.body
-    if message.body['type'] == 'message':
-        channel_name = message.channel._client.channels[message.body['channel']]['name']
-        username = message.channel._client.users[message.body['user']]['name']
-        print channel_name, username
-        if channel_name in slack_wechat_map:
-            group_name = slack_wechat_map[channel_name]
-            wxbot.send_msg(group_name, username + ' said: ' + message.body['text'])
-    else:
-        print 'unable to process the message'
+    try:
+        logging.info(message.body)
+        if message.body['type'] == 'message':
+            channel_name = message.channel._client.channels[message.body['channel']]['name']
+            username = message.channel._client.users[message.body['user']]['name']
+            logging.info("%s, %s", channel_name, username)
+            if channel_name in slack_wechat_map:
+                group_name = slack_wechat_map[channel_name]
+                group_id = wxbot.get_user_id(group_name)
+                if group_id is not None:
+                    wxbot.send_msg_by_uid(username + ' said: ' + message.body['text'], group_id)
+                    if 'subtype' in message.body and message.body['subtype'] == 'file_share':
+                        url = message.body['file']['url_private_download']
+                        filename = 'slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
+                        filepath = "temp/" + filename
+                        download_file(url, filepath)
+                        wxbot.send_img_msg_by_uid(filepath, group_id)
+        else:
+            logging.warning('unable to process the message')
+    except Exception, e:
+        logging.exception(e)
 
 '''@respond_to('hi', re.IGNORECASE)
 def hi(message):
