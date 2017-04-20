@@ -6,9 +6,9 @@ from wxbot import *
 from slackbot.bot import SlackClient
 import yaml
 
-config=yaml.load(file('config.yaml').read())
+config = yaml.load(file('config.yaml').read())
 wx_slack_map = config['bindings']
-slack_client = SlackClient(config['SLACK_TOKEN'])
+slack_client = SlackClient(config['slack_token'])
 
 
 class WxBotSlack(WXBot):
