@@ -26,14 +26,14 @@ def get_wechat_mappings():
 
 
 def del_mapping(group_name, channel_name):
-    conn.execute('DELETE FROM mapping WHERE channel_name = ?;', channel_name)
-    conn.execute('DELETE FROM mapping WHERE group_name = ?;', group_name)
+    conn.execute('DELETE FROM mapping WHERE channel_name = ?;', (channel_name, ))
+    conn.execute('DELETE FROM mapping WHERE group_name = ?;', (group_name, ))
     conn.commit()
 
 
 def set_mapping(group_name, channel_name):
     del_mapping(group_name, channel_name)
-    conn.execute('INSERT INTO mapping (group_name, channel_name) VALUES (?, ?);', group_name, channel_name)
+    conn.execute('INSERT INTO mapping (group_name, channel_name) VALUES (?, ?);', (group_name, channel_name))
     conn.commit()
 
 
