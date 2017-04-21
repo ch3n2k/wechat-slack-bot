@@ -11,8 +11,16 @@ from wxbot_slack import wxbot
 import yaml
 import requests
 
+def html_escape(s):
+    s = s.replace("&", "&amp;")
+    s = s.replace(">", "&gt;")
+    s = s.replace("<", "&lt;")
+    s = s.replace('"', "&quot;")
+    s = s.replace("'", "&apos;")
+    return s
+        
 config = yaml.load(file('config.yaml').read())
-slack_wechat_map = dict((x, w) for w, x in config['bindings'].iteritems())
+slack_wechat_map = dict((x, html_escape(w)) for w, x in config['bindings'].iteritems())
 logging.info( "channel mapping configuration:")
 for k, v in slack_wechat_map.iteritems():
     logging.info("%s <> %s", k, v )
@@ -26,7 +34,6 @@ def download_file(url, filepath):
             f.write(resp.content)
     else:
         raise FileDownloadException()
-        
         
     
 @listen_to('.*')
@@ -48,6 +55,8 @@ def any_message(message):
                         filepath = "temp/" + filename
                         download_file(url, filepath)
                         wxbot.send_img_msg_by_uid(filepath, group_id)
+                else:
+                    logging.error("group name not found in contacts: %s", group_name)
         else:
             logging.warning('unable to process the message')
     except Exception, e:
