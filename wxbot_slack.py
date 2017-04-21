@@ -61,6 +61,15 @@ emoji_map_table = {
 }
 
 
+def html_escape(s):
+    s = s.replace("&", "&amp;")
+    s = s.replace(">", "&gt;")
+    s = s.replace("<", "&lt;")
+    s = s.replace('"', "&quot;")
+    s = s.replace("'", "&apos;")
+    return s
+
+
 def filter_text(text):
     for k, v in emoji_map_table.iteritems():
         text = text.replace(k, v)
@@ -89,7 +98,7 @@ class WxBotSlack(WXBot):
         try:
             if msg['msg_type_id'] == self.MSG_TYPE_GROUP:
                 content_type = msg['content']['type']
-                groupname = msg['user']['name']
+                groupname = html_escape(msg['user']['name'])
                 username = filter_text(msg['content']['user']['name'])
                 logging.info("%s, %s, %s", content_type, groupname, username)
                 if groupname in config.wechat_slack_map:

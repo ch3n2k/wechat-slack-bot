@@ -15,15 +15,6 @@ import config
 class FileDownloadException(Exception): pass
 
 
-def html_escape(s):
-    s = s.replace("&", "&amp;")
-    s = s.replace(">", "&gt;")
-    s = s.replace("<", "&lt;")
-    s = s.replace('"', "&quot;")
-    s = s.replace("'", "&apos;")
-    return s
-
-
 def download_file(url, filepath):
     resp = requests.get(url, headers={'Authorization': 'Bearer ' + config['slack_token']})
     if resp.status_code == 200:
