@@ -61,15 +61,24 @@ def any_message(message):
     try:
         logging.info(message.body)
         if message.body['type'] == 'message':
-            channel_name = message.channel._client.channels[message.body['channel']]['name']
+            try:
+                channel_name = message.channel._client.channels[message.body['channel']]['name']
+            except KeyError:
+                message.channel._client.reconnect()
+                channel_name = message.channel._client.channels[message.body['channel']]['name']
             username = message.channel._client.users[message.body['user']]['name']
             logging.info("%s, %s", channel_name, username)
             content = message.body['text']
             if content.startswith('!wechat'):
                 reply = handle_command(content, channel_name)
                 message.reply(reply)
+                if channel_name in config.slack_wechat_map:
+                    group_name = config.slack_wechat_map[channel_name]
+                    group_id = wxbot.get_user_id(group_name)
+                    if group_id is not None:
+                        wxbot.send_msg_by_uid(reply, group_id)
             elif channel_name in config.slack_wechat_map:
-                group_name = html_escape(config.slack_wechat_map[channel_name])
+                group_name = config.slack_wechat_map[channel_name]
                 group_id = wxbot.get_user_id(group_name)
                 if group_id is not None:
                     wxbot.send_msg_by_uid(username + ' said: ' + content, group_id)
