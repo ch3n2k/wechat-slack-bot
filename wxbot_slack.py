@@ -41,8 +41,8 @@ emoji_map_table = {
     '[Relief]': u'\U0001f625',
     '[Clap]': u'\U0001f44f',
     '[Trick]': u'\U0001f47b',
-    '[Bah！L]': u'\U0001f63e',
-    '[Bah！R]': u'\U0001f63e',
+    u'[Bah！L]': u'\U0001f63e',
+    u'[Bah！R]': u'\U0001f63e',
     '[Yawn]': u'\U0001f62a',
     '[Lookdown]': u'\U0001f612',
     '[Puling]': u'\U0001f614',
@@ -72,6 +72,7 @@ def html_escape(s):
 
 def filter_text(text):
     for k, v in emoji_map_table.iteritems():
+        logging.warning("%r, %r", k, v)
         text = text.replace(k, v)
     while True:
         result = re.search('(<span class="emoji emoji([0-9a-f]*)"></span>)', text)
