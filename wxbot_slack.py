@@ -91,11 +91,11 @@ class WxBotSlack(WXBot):
                 content_type = msg['content']['type']
                 groupname = msg['user']['name']
                 username = filter_text(msg['content']['user']['name'])
-                content = filter_text(msg['content']['desc'])
                 logging.info("%s, %s, %s", content_type, groupname, username)
                 if groupname in config.wechat_slack_map:
                     channelname = config.wechat_slack_map[groupname]
                     if content_type == self.CONTENT_TYPE_TEXT:
+                        content = filter_text(msg['content']['desc'])
                         self.slack_client.send_message(channelname, username + " said: " + content)
                     elif content_type == self.CONTENT_TYPE_IMAGE:
                         logging.info("image content data: %r", msg['content']['data'])
