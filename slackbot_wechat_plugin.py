@@ -69,7 +69,7 @@ def any_message(message):
                 reply = handle_command(content, channel_name)
                 message.reply(reply)
             elif channel_name in config.slack_wechat_map:
-                group_name = config.slack_wechat_map[channel_name]
+                group_name = html_escape(config.slack_wechat_map[channel_name])
                 group_id = wxbot.get_user_id(group_name)
                 if group_id is not None:
                     wxbot.send_msg_by_uid(username + ' said: ' + content, group_id)
