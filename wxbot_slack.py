@@ -57,6 +57,16 @@ emoji_map_table = {
     '[Lip]': u'\U0001f48b',
     '[Heart]': u'\U00002764',
     '[BrokenHeart]': u'\U0001f494',
+    '[Cake]': u'\U0001f382',
+    '[Bomb]': u'\U0001f4a3',
+    '[Poop]': u'\U0001f4a9',
+    '[Moon]': u'\U0001f319',
+    '[Sun]': u'\U0001f31e',
+    '[Strong]': u'\U0001f44d',
+    '[Weak]': u'\U0001f44e',
+    '[Victory]': u'\U0001f31e',
+    '[Fist]': u'\U0000270a',
+    '[OK]': u'\U0001f44c',
 
 }
 
