@@ -3,3 +3,4 @@ requests
 pyqrcode
 pypng
 Pillow
+pyyaml

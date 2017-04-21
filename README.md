@@ -25,5 +25,7 @@
 
 将 config.yaml.tmpl 改名为 config.yaml ，在该文件中添加slack token和群组映射关系。
 
+安装python。安装依赖（ pip install -r requirements.txt ）。
+
 运行 python main.py 启动应用，微信扫码登录。
 

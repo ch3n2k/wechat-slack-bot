@@ -8,8 +8,12 @@ from slackbot.dispatcher import Message
 from slackbot.slackclient import Channel
 
 from wxbot_slack import wxbot
-import yaml
 import requests
+import config
+
+
+class FileDownloadException(Exception): pass
+
 
 def html_escape(s):
     s = s.replace("&", "&amp;")
@@ -18,14 +22,7 @@ def html_escape(s):
     s = s.replace('"', "&quot;")
     s = s.replace("'", "&apos;")
     return s
-        
-config = yaml.load(file('config.yaml').read())
-slack_wechat_map = dict((x, html_escape(w)) for w, x in config['bindings'].iteritems())
-logging.info( "channel mapping configuration:")
-for k, v in slack_wechat_map.iteritems():
-    logging.info("%s <> %s", k, v )
 
-class FileDownloadException(Exception): pass
 
 def download_file(url, filepath):
     resp = requests.get(url, headers={'Authorization': 'Bearer ' + config['slack_token']})
@@ -34,7 +31,30 @@ def download_file(url, filepath):
             f.write(resp.content)
     else:
         raise FileDownloadException()
-        
+
+
+def handle_command(command, channel_name):
+    USAGE = '''!wechat sync <wechat group name>
+!wechat disable <wechat group name>
+'''
+
+    if not command.startswith("!wechat"):
+        return
+
+    params = command.split()
+    if len(params) < 3:
+        return "bad usage. \n" + USAGE
+    action = params[1]
+    remainings = command[command.find(action) + len(action):].strip()
+    if action == 'sync':
+        config.set_mapping(group_name=remainings, channel_name=channel_name)
+        return "mapping established between %s <> %s" % (remainings, channel_name)
+    elif action == 'disable':
+        config.del_mapping(group_name=remainings, channel_name=channel_name)
+        return "mapping disabled between %s <> %s" % (remainings, channel_name)
+    else:
+        return "bad usage. \n" + USAGE
+
     
 @listen_to('.*')
 def any_message(message):
@@ -44,11 +64,15 @@ def any_message(message):
             channel_name = message.channel._client.channels[message.body['channel']]['name']
             username = message.channel._client.users[message.body['user']]['name']
             logging.info("%s, %s", channel_name, username)
-            if channel_name in slack_wechat_map:
-                group_name = slack_wechat_map[channel_name]
+            content = message.body['text']
+            if content.startswith('!wechat'):
+                reply = handle_command(content, channel_name)
+                message.reply(reply)
+            elif channel_name in config.slack_wechat_map:
+                group_name = config.slack_wechat_map[channel_name]
                 group_id = wxbot.get_user_id(group_name)
                 if group_id is not None:
-                    wxbot.send_msg_by_uid(username + ' said: ' + message.body['text'], group_id)
+                    wxbot.send_msg_by_uid(username + ' said: ' + content, group_id)
                     if 'subtype' in message.body and message.body['subtype'] == 'file_share':
                         url = message.body['file']['url_private_download']
                         filename = 'slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
@@ -57,26 +81,10 @@ def any_message(message):
                         wxbot.send_img_msg_by_uid(filepath, group_id)
                 else:
                     logging.error("group name not found in contacts: %s", group_name)
+            else:
+                pass
         else:
             logging.warning('unable to process the message')
     except Exception, e:
         logging.exception(e)
-
-'''@respond_to('hi', re.IGNORECASE)
-def hi(message):
-    message.reply('I can understand hi or HI!')
-    # react with thumb up emoji
-    message.react('+1')
-
-@respond_to('I love you')
-def love(message):
-    message.reply('I love you too!')
-
-@listen_to('Can someone help me?')
-def help(message):
-    # Message is replied to the sender (prefixed with @user)
-    message.reply('Yes, I can!')
-
-    # Message is sent on the channel
-    # message.send('I can help everybody!')'''
 
