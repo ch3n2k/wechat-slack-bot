@@ -72,7 +72,6 @@ def html_escape(s):
 
 def filter_text(text):
     for k, v in emoji_map_table.iteritems():
-        logging.warning("%r, %r", k, v)
         text = text.replace(k, v)
     while True:
         result = re.search('(<span class="emoji emoji([0-9a-f]*)"></span>)', text)
