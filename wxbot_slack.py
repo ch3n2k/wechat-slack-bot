@@ -1,12 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
-from wxbot import *
-
+import wxpy
 from slackbot.bot import SlackClient
 import config
 import logging
-import urlparse
+import urllib.parse
+import html
 import re
 
 emoji_map_table = {
@@ -71,17 +71,8 @@ emoji_map_table = {
 }
 
 
-def html_escape(s):
-    s = s.replace("&", "&amp;")
-    s = s.replace(">", "&gt;")
-    s = s.replace("<", "&lt;")
-    s = s.replace('"', "&quot;")
-    s = s.replace("'", "&apos;")
-    return s
-
-
 def filter_text(text):
-    for k, v in emoji_map_table.iteritems():
+    for k, v in emoji_map_table.items():
         text = text.replace(k, v)
     while True:
         result = re.search('(<span class="emoji emoji([0-9a-f]*)"></span>)', text)
@@ -93,46 +84,32 @@ def filter_text(text):
     return text
 
 
-class WxBotSlack(WXBot):
-    MSG_TYPE_GROUP = 3
-    MSG_TYPE_CONTACT = 4
-
-    CONTENT_TYPE_TEXT = 0
-    CONTENT_TYPE_IMAGE = 3
-
-    def __init__(self):
-        WXBot.__init__(self)
-        self.slack_client = SlackClient(config.slack_token)
-
-    def handle_msg_all(self, msg):
-        try:
-            if msg['msg_type_id'] == self.MSG_TYPE_GROUP:
-                content_type = msg['content']['type']
-                groupname = html_escape(msg['user']['name'])
-                username = filter_text(msg['content']['user']['name'])
-                logging.info("%s, %s, %s", content_type, groupname, username)
-                if groupname in config.wechat_slack_map:
-                    channelname = config.wechat_slack_map[groupname]
-                    if content_type == self.CONTENT_TYPE_TEXT:
-                        content = filter_text(msg['content']['desc'])
-                        self.slack_client.send_message(channelname, username + " said: " + content)
-                    elif content_type == self.CONTENT_TYPE_IMAGE:
-                        logging.info("image content data: %r", msg['content']['data'])
-                        filename = 'img_' + urlparse.parse_qs(urlparse.urlparse(msg['content']['data']).query)['MsgID'][
-                            0] + '.jpg'
-                        filepath = 'temp/' + filename
-                        comment = username + " sent a image: " + filename
-                        self.slack_client.upload_file(channelname, filename, filepath, comment)
-                    else:
-                        # todo: handle other message content types
-                        pass
-                    if username == 'unknown':
-                        self.get_contact()
-                else:
-                    pass
-
-        except Exception, e:
-            logging.exception(e)
+wxbot = wxpy.Bot(console_qr=1, cache_path=True)
+slack_client = SlackClient(config.slack_token)
 
 
-wxbot = WxBotSlack()
+@wxbot.register(wxpy.Group)
+def handle_msg_all(msg: wxpy.Message):
+    try:
+        logging.info("%r", msg)
+        groupname = msg.sender.name
+        username = msg.member.name
+        if groupname in config.wechat_slack_map:
+            channelname = config.wechat_slack_map[groupname]
+            if msg.type == wxpy.TEXT:
+                content = filter_text(msg.text)
+                slack_client.send_message(channelname, username + " said: " + content)
+            elif msg.type == wxpy.PICTURE:
+                filepath = "temp/" + msg.file_name
+                data = msg.get_file(filepath)
+                logging.info("image content data: %r", data)
+                comment = username + " sent a image: " + msg.file_name
+                slack_client.upload_file(channelname, msg.file_name, filepath, comment)
+            else:
+                # todo: handle other message content types
+                pass
+        else:
+            pass
+
+    except Exception as e:
+        logging.exception(e)

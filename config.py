@@ -1,7 +1,7 @@
 import yaml
 import db
 
-config = yaml.load(file('config.yaml').read())
+config = yaml.load(open('config.yaml').read())
 
 slack_token = config['slack_token']
 

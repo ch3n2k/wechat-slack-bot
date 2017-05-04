@@ -16,9 +16,9 @@ class FileDownloadException(Exception): pass
 
 
 def download_file(url, filepath):
-    resp = requests.get(url, headers={'Authorization': 'Bearer ' + config['slack_token']})
+    resp = requests.get(url, headers={'Authorization': 'Bearer ' + config.slack_token})
     if resp.status_code == 200:
-        with file(filepath, 'w') as f:
+        with open(filepath, 'wb') as f:
             f.write(resp.content)
     else:
         raise FileDownloadException()
@@ -65,26 +65,26 @@ def any_message(message):
                 message.reply(reply)
                 if channel_name in config.slack_wechat_map:
                     group_name = config.slack_wechat_map[channel_name]
-                    group_id = wxbot.get_user_id(group_name)
-                    if group_id is not None:
-                        wxbot.send_msg_by_uid(reply, group_id)
+                    groups = wxbot.groups().search(group_name)
+                    if groups:
+                        groups[0].send_msg(reply)
             elif channel_name in config.slack_wechat_map:
                 group_name = config.slack_wechat_map[channel_name]
-                group_id = wxbot.get_user_id(group_name)
-                if group_id is not None:
-                    wxbot.send_msg_by_uid(username + ' said: ' + content, group_id)
+                groups = wxbot.groups().search(group_name)
+                if groups:
+                    groups[0].send_msg(username + ' said: ' + content)
                     if 'subtype' in message.body and message.body['subtype'] == 'file_share':
                         url = message.body['file']['url_private_download']
                         filename = 'slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
                         filepath = "temp/" + filename
                         download_file(url, filepath)
-                        wxbot.send_img_msg_by_uid(filepath, group_id)
+                        groups[0].send_image(filepath)
                 else:
                     logging.error("group name not found in contacts: %s", group_name)
             else:
                 pass
         else:
             logging.warning('unable to process the message')
-    except Exception, e:
+    except Exception as e:
         logging.exception(e)
 
