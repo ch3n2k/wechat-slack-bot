@@ -84,7 +84,7 @@ def filter_text(text):
     return text
 
 
-wxbot = wxpy.Bot(console_qr=1, cache_path=True)
+wxbot = wxpy.Bot(console_qr=True, cache_path=True)
 slack_client = SlackClient(config.slack_token)
 
 

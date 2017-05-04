@@ -1,9 +1,7 @@
-gevent
 ipython
 slackbot
 requests
 pyqrcode
-pypng
 Pillow
 pyyaml
 wxpy
