@@ -5,9 +5,8 @@ import wxpy
 from slackbot.bot import SlackClient
 import config
 import logging
-import urllib.parse
-import html
 import re
+from slackbot_main import slackbot
 
 emoji_map_table = {
     '[Smile]': u'\U0001f600',
@@ -85,8 +84,7 @@ def filter_text(text):
 
 
 wxbot = wxpy.Bot(console_qr=True, cache_path=True)
-slack_client = SlackClient(config.slack_token)
-
+slack_client = slackbot._client
 
 @wxbot.register(wxpy.Group)
 def handle_msg_all(msg: wxpy.Message):

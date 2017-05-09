@@ -48,16 +48,16 @@ def handle_command(command, channel_name):
 
     
 @listen_to('.*')
-def any_message(message):
+def any_message(message: Message):
     try:
         logging.info(message.body)
         if message.body['type'] == 'message':
             try:
-                channel_name = message.channel._client.channels[message.body['channel']]['name']
+                channel_name = message._client.channels[message.body['channel']]['name']
             except KeyError:
-                message.channel._client.reconnect()
-                channel_name = message.channel._client.channels[message.body['channel']]['name']
-            username = message.channel._client.users[message.body['user']]['name']
+                message._client.reconnect()
+                channel_name = message._client.channels[message.body['channel']]['name']
+            username = message._client.users[message.body['user']]['name']
             logging.info("%s, %s", channel_name, username)
             content = message.body['text']
             if content.startswith('!wechat'):
