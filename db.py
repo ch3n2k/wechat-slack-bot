@@ -2,7 +2,7 @@ import sqlite3
 import logging
 
 def get_conn():
-    conn = sqlite3.connect('bot.db')
+    return sqlite3.connect('bot.db')
 
 
 def init_db():
