@@ -36,6 +36,15 @@ def get_channel_name(message: Message):
     return channel_name
 
 
+def get_username_by_id(message: Message, userid):
+    try:
+        username = message._client.users[userid]['name']
+    except KeyError:
+        message._client.reconnect()
+        username = message._client.users[userid]['name']
+    return username
+
+
 def send_wechat_image(group_name, image_path, slackmsg=None):
     groups = wxbot.groups().search(group_name)
     if groups:
@@ -52,6 +61,14 @@ def send_wechat_text(group_name, text, slackmsg=None):
     else:
         if slackmsg:
             slackmsg.reply('warning: wechat group not found: %s' % group_name)
+
+
+def filter_content(message: Message):
+    content = message.body['text']
+    def func(matchobj):
+        return matchobj.group(1) + get_username_by_id(matchobj.group(2)) + matchobj.group(3)
+
+    return re.sub(r'(<@)(U[A-Z0-9]*)(>)', func, content)
 
 
 @respond_to('list')
@@ -115,10 +132,9 @@ def any_message(message: Message):
             channel_name = get_channel_name(message)
             username = message._client.users[message.body['user']]['name']
             logging.info("%s, %s", channel_name, username)
-            content = message.body['text']
             if channel_name and channel_name in config.slack_wechat_map:
                 group_name = config.slack_wechat_map[channel_name]
-                send_wechat_text(group_name, username + ' said: ' + content)
+                send_wechat_text(group_name, username + ' said: ' + filter_content(message))
                 if 'subtype' in message.body and message.body['subtype'] == 'file_share':
                     url = message.body['file']['url_private_download']
                     filepath = 'temp/slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
