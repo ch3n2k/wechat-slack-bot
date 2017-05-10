@@ -38,7 +38,6 @@ def del_mapping(group_name, channel_name):
 
 def set_mapping(group_name, channel_name):
     conn = get_conn()
-    del_mapping(group_name, channel_name)
     conn.execute('INSERT INTO mapping (group_name, channel_name) VALUES (?, ?);', (group_name, channel_name))
     conn.commit()
 
