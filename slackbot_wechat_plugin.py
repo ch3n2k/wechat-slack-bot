@@ -94,10 +94,12 @@ def command_sync(msg: Message, group_name):
         send_wechat_text(group_name, reply_content, msg)
 
 
-#@respond_to('help')
+@respond_to('help')
 def my_default_hanlder(message):
     USAGE = '''@wechat sync <wechat group name>
 @wechat disable <wechat group name>
+@wechat status
+@wechat list
 @wechat help
 '''
     message.reply(USAGE)
