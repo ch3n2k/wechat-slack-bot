@@ -1,6 +1,5 @@
 import logging
-from slackbot.bot import respond_to
-from slackbot.bot import listen_to
+from slackbot.bot import respond_to, default_reply, listen_to
 import re
 
 import slackbot.bot as bot
@@ -24,61 +23,102 @@ def download_file(url, filepath):
         raise FileDownloadException()
 
 
-def handle_command(command, channel_name):
-    USAGE = '''!wechat sync <wechat group name>
-!wechat disable <wechat group name>
-'''
+def get_channel_name(message: Message):
+    if 'channel' not in message.body:
+        return None
+    try:
+        channel_name = message._client.channels[message.body['channel']]['name']
+    except KeyError:
+        message._client.reconnect()
+        channel_name = message._client.channels[message.body['channel']]['name']
+    return channel_name
 
-    if not command.startswith("!wechat"):
-        return
 
-    params = command.split()
-    if len(params) < 3:
-        return "bad usage. \n" + USAGE
-    action = params[1]
-    remainings = command[command.find(action) + len(action):].strip()
-    if action == 'sync':
-        config.set_mapping(group_name=remainings, channel_name=channel_name)
-        return "mapping established between %s <> %s" % (remainings, channel_name)
-    elif action == 'disable':
-        config.del_mapping(group_name=remainings, channel_name=channel_name)
-        return "mapping disabled between %s <> %s" % (remainings, channel_name)
+def send_wechat_image(group_name, image_path, slackmsg=None):
+    groups = wxbot.groups().search(group_name)
+    if groups:
+        groups[0].send_image(image_path)
     else:
-        return "bad usage. \n" + USAGE
+        if slackmsg:
+            slackmsg.reply('warning: wechat group not found: %s' % group_name)
 
-    
+
+def send_wechat_text(group_name, text, slackmsg=None):
+    groups = wxbot.groups().search(group_name)
+    if groups:
+        groups[0].send_msg(text)
+    else:
+        if slackmsg:
+            slackmsg.reply('warning: wechat group not found: %s' % group_name)
+
+
+@respond_to('list')
+def command_list(msg):
+    msg.reply('all mappings: %r' % config.wechat_slack_map)
+
+
+@respond_to('status')
+def command_status(msg):
+    channel_name = get_channel_name(msg)
+    if not channel_name:
+        msg.reply('use this command in a channel')
+    elif channel_name in config.slack_wechat_map:
+        group_name = config.slack_wechat_map[channel_name]
+        msg.reply('this channel is mapped to wechat group: %s' % group_name)
+    else:
+        msg.reply('this channel is not mapped to wechat group')
+
+
+@respond_to('disable (.*)')
+def command_disable(msg, group_name):
+    channel_name = get_channel_name(msg)
+    if not channel_name:
+        msg.reply('use this command in a channel')
+    else:
+        config.del_mapping(group_name=group_name, channel_name=channel_name)
+        reply_content = "mapping disabled between %s <> %s" % (group_name, channel_name)
+        msg.reply(reply_content)
+        send_wechat_text(group_name, reply_content, msg)
+
+
+@respond_to('sync (.*)')
+def command_sync(msg: Message, group_name):
+    channel_name = get_channel_name(msg)
+    if not channel_name:
+        msg.reply('use this command in a channel')
+    else:
+        config.set_mapping(group_name=group_name, channel_name=channel_name)
+        reply_content = 'mapping established between %s <> %s"' % (group_name, channel_name)
+        msg.reply(reply_content)
+        send_wechat_text(group_name, reply_content, msg)
+
+
+#@respond_to('help')
+def my_default_hanlder(message):
+    USAGE = '''@wechat sync <wechat group name>
+@wechat disable <wechat group name>
+@wechat help
+'''
+    message.reply(USAGE)
+
+
 @listen_to('.*')
 def any_message(message: Message):
     try:
         logging.info(message.body)
         if message.body['type'] == 'message':
-            try:
-                channel_name = message._client.channels[message.body['channel']]['name']
-            except KeyError:
-                message._client.reconnect()
-                channel_name = message._client.channels[message.body['channel']]['name']
+            channel_name = get_channel_name(message)
             username = message._client.users[message.body['user']]['name']
             logging.info("%s, %s", channel_name, username)
             content = message.body['text']
-            if content.startswith('!wechat'):
-                reply = handle_command(content, channel_name)
-                message.reply(reply)
-                if channel_name in config.slack_wechat_map:
-                    group_name = config.slack_wechat_map[channel_name]
-                    groups = wxbot.groups().search(group_name)
-                    if groups:
-                        groups[0].send_msg(reply)
-            elif channel_name in config.slack_wechat_map:
+            if channel_name in config.slack_wechat_map:
                 group_name = config.slack_wechat_map[channel_name]
-                groups = wxbot.groups().search(group_name)
-                if groups:
-                    groups[0].send_msg(username + ' said: ' + content)
-                    if 'subtype' in message.body and message.body['subtype'] == 'file_share':
-                        url = message.body['file']['url_private_download']
-                        filename = 'slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
-                        filepath = "temp/" + filename
-                        download_file(url, filepath)
-                        groups[0].send_image(filepath)
+                send_wechat_text(group_name, username + ' said: ' + content)
+                if 'subtype' in message.body and message.body['subtype'] == 'file_share':
+                    url = message.body['file']['url_private_download']
+                    filepath = 'temp/slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
+                    download_file(url, filepath)
+                    send_wechat_image(group_name, filepath)
                 else:
                     logging.error("group name not found in contacts: %s", group_name)
             else:
