@@ -24,7 +24,8 @@ def download_file(url, filepath):
 
 
 def get_channel_name(message: Message):
-    if 'channel' not in message.body or not message.body['channel'].startswith('C'):
+    if 'channel' not in message.body or \
+            (not message.body['channel'].startswith('C') and not message.body['channel'].startswith('G')):
         logging.warning('failed to get channel name: %r' %message.body)
         return None
     try:
