@@ -24,7 +24,8 @@ def download_file(url, filepath):
 
 
 def get_channel_name(message: Message):
-    if 'channel' not in message.body:
+    if 'channel' not in message.body or not message.body['channel'].startswith('C'):
+        logging.warning('failed to get channel name: %r' %message.body)
         return None
     try:
         channel_name = message._client.channels[message.body['channel']]['name']
@@ -111,7 +112,7 @@ def any_message(message: Message):
             username = message._client.users[message.body['user']]['name']
             logging.info("%s, %s", channel_name, username)
             content = message.body['text']
-            if channel_name in config.slack_wechat_map:
+            if channel_name and channel_name in config.slack_wechat_map:
                 group_name = config.slack_wechat_map[channel_name]
                 send_wechat_text(group_name, username + ' said: ' + content)
                 if 'subtype' in message.body and message.body['subtype'] == 'file_share':
