@@ -66,7 +66,7 @@ def send_wechat_text(group_name, text, slackmsg=None):
 def filter_content(message: Message):
     content = message.body['text']
     def func(matchobj):
-        return matchobj.group(1) + get_username_by_id(matchobj.group(2)) + matchobj.group(3)
+        return matchobj.group(1) + get_username_by_id(message, matchobj.group(2)) + matchobj.group(3)
 
     return re.sub(r'(<@)(U[A-Z0-9]*)(>)', func, content)
 
