@@ -36,7 +36,14 @@ def get_channel_name(message: Message):
     return channel_name
 
 
-def get_username_by_id(message: Message, userid):
+def get_username_by_id(message: Message, userid=None):
+    if userid is None:
+        if 'username' in message.body:
+            return message.body['username']
+        elif 'user' in message.body:
+            userid = message.body['user']
+        else:
+            return 'unknown user'
     try:
         username = message._client.users[userid]['name']
     except KeyError:
@@ -73,7 +80,7 @@ def filter_content(message: Message):
 
 @respond_to('list')
 def command_list(msg):
-    msg.reply('all mappings: %r' % config.wechat_slack_map)
+    msg.reply('all mappings(wechat <> slack): \n%s' % "\n".join(["%s <> %s"%(k,v) for (k, v) in config.wechat_slack_map.items()]))
 
 
 @respond_to('status')
@@ -130,7 +137,7 @@ def any_message(message: Message):
         logging.info(message.body)
         if message.body['type'] == 'message':
             channel_name = get_channel_name(message)
-            username = message._client.users[message.body['user']]['name']
+            username = get_username_by_id(message)
             logging.info("%s, %s", channel_name, username)
             if channel_name and channel_name in config.slack_wechat_map:
                 group_name = config.slack_wechat_map[channel_name]
