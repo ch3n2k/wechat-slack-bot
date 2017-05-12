@@ -89,7 +89,7 @@ slack_client = slackbot._client
 @wxbot.register(wxpy.Group)
 def handle_msg_all(msg: wxpy.Message):
     try:
-        logging.info("%r", msg)
+        logging.info("%r %r", msg.sender.name, msg.member.name)
         groupname = msg.sender.name
         username = msg.member.name
         if groupname in config.wechat_slack_map:

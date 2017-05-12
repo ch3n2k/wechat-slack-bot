@@ -70,12 +70,26 @@ def send_wechat_text(group_name, text, slackmsg=None):
             slackmsg.reply('warning: wechat group not found: %s' % group_name)
 
 
+def filter_emoji(text):
+    def func(match):
+        emoji = match.groups()[0]
+        if not emoji in config.emoji_map:
+            return match.group()
+        else:
+            unified = config.emoji_map[emoji]
+            return b''.join(b'\\U'+b'0'*(8-len(i))+i.encode('ascii') for i in unified.split('-')).decode('unicode-escape')
+    p = r"\:([a-zA-Z0-9\-_\+]+)\:(?:\:([a-zA-Z0-9\-_\+]+)\:)?"
+    return re.sub(p, func, text)
+
+
 def filter_content(message: Message):
     content = message.body['text']
     def func(matchobj):
         return matchobj.group(1) + get_username_by_id(message, matchobj.group(2)) + matchobj.group(3)
 
-    return re.sub(r'(<@)(U[A-Z0-9]*)(>)', func, content)
+    content = re.sub(r'(<@)(U[A-Z0-9]*)(>)', func, content)
+    content = filter_emoji(content)
+    return content
 
 
 @respond_to('list')
@@ -129,6 +143,8 @@ def my_default_hanlder(message):
         @wechat help
     '''
     message.reply(USAGE)
+
+
 
 
 @listen_to('.*')
