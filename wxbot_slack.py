@@ -101,7 +101,6 @@ def forward_msg_to_slack(msg, channelname):
     elif msg.type == wxpy.VIDEO:
         filepath = "temp/" + msg.file_name
         data = msg.get_file(filepath)
-        #logging.info("video content data: %r", data)
         comment = username + " sent a video: " + msg.file_name
         slack_client.upload_file(channelname, msg.file_name, filepath, comment)
     else:
@@ -117,7 +116,7 @@ def handle_msg_all(msg: wxpy.Message):
             channelname = config.wechat_slack_map[groupname]
             forward_msg_to_slack(msg, channelname)
         if msg.is_at and hasattr(config, 'botadmin'):
-            forward_msg_to_slack(msg, config.botadmin)
+            forward_msg_to_slack(msg, '@' + config.botadmin)
 
     except Exception as e:
         logging.exception(e)

@@ -52,10 +52,13 @@ def get_username_by_id(message: Message, userid=None):
     return username
 
 
-def send_wechat_image(group_name, image_path, slackmsg=None):
+def send_wechat_file(group_name, filetype, file_path, slackmsg=None):
     groups = wxbot.groups().search(group_name)
     if groups:
-        groups[0].send_image(image_path)
+        if filetype == 'mp4':
+            groups[0].send_video(file_path)
+        else:
+            groups[0].send_image(file_path)
     else:
         if slackmsg:
             slackmsg.reply('warning: wechat group not found: %s' % group_name)
@@ -160,9 +163,10 @@ def any_message(message: Message):
                 send_wechat_text(group_name, username + ' said: ' + filter_content(message))
                 if 'subtype' in message.body and message.body['subtype'] == 'file_share':
                     url = message.body['file']['url_private_download']
-                    filepath = 'temp/slack_' + message.body['file']['id'] + "." + message.body['file']['filetype']
+                    filetype = message.body['file']['filetype']
+                    filepath = 'temp/slack_' + message.body['file']['id'] + "." + filetype
                     download_file(url, filepath)
-                    send_wechat_image(group_name, filepath)
+                    send_wechat_file(group_name, filetype, filepath)
                 else:
                     logging.error("group name not found in contacts: %s", group_name)
             else:
