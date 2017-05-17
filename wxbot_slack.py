@@ -86,28 +86,39 @@ def filter_text(text):
 wxbot = wxpy.Bot(console_qr=True, cache_path=True)
 slack_client = slackbot._client
 
+
+def forward_msg_to_slack(msg, channelname):
+    username = msg.member.name
+    if msg.type == wxpy.TEXT:
+        content = filter_text(msg.text)
+        slack_client.send_message(channelname, username + " said: " + content)
+    elif msg.type == wxpy.PICTURE:
+        filepath = "temp/" + msg.file_name
+        data = msg.get_file(filepath)
+        logging.info("image content data: %r", data)
+        comment = username + " sent a image: " + msg.file_name
+        slack_client.upload_file(channelname, msg.file_name, filepath, comment)
+    elif msg.type == wxpy.VIDEO:
+        filepath = "temp/" + msg.file_name
+        data = msg.get_file(filepath)
+        #logging.info("video content data: %r", data)
+        comment = username + " sent a video: " + msg.file_name
+        slack_client.upload_file(channelname, msg.file_name, filepath, comment)
+        pass
+    else:
+        pass
+
+
 @wxbot.register(wxpy.Group)
 def handle_msg_all(msg: wxpy.Message):
     try:
         logging.info("%r %r", msg.sender.name, msg.member.name)
         groupname = msg.sender.name
-        username = msg.member.name
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
-            if msg.type == wxpy.TEXT:
-                content = filter_text(msg.text)
-                slack_client.send_message(channelname, username + " said: " + content)
-            elif msg.type == wxpy.PICTURE:
-                filepath = "temp/" + msg.file_name
-                data = msg.get_file(filepath)
-                logging.info("image content data: %r", data)
-                comment = username + " sent a image: " + msg.file_name
-                slack_client.upload_file(channelname, msg.file_name, filepath, comment)
-            else:
-                # todo: handle other message content types
-                pass
-        else:
-            pass
+            forward_msg_to_slack(msg, channelname)
+        if msg.is_at and hasattr(config, 'botadmin'):
+            forward_msg_to_slack(msg, config.botadmin)
 
     except Exception as e:
         logging.exception(e)
