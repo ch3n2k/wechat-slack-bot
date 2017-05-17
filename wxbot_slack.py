@@ -87,22 +87,32 @@ wxbot = wxpy.Bot(console_qr=True, cache_path=True)
 slack_client = slackbot._client
 
 
-def forward_msg_to_slack(msg, channelname):
+def forward_msg_to_slack(msg, channelname, group=None):
     username = msg.member.name
-    if channelname.startswith('@'):
-        place = " in " + msg.sender.name
-    else:
-        place = ""
+    place = ' in ' + group if group else ""
     if msg.type == wxpy.TEXT:
         content = username + " said" + place + ": " + filter_text(msg.text)
         slack_client.send_message(channelname, content)
-    elif msg.type == wxpy.PICTURE or msg.type == wxpy.VIDEO or msg.type == wxpy.ATTACHMENT:
+    elif msg.type in [wxpy.PICTURE, wxpy.VIDEO, wxpy.ATTACHMENT, wxpy.RECORDING]:
         filepath = "temp/" + msg.file_name
         data = msg.get_file(filepath)
         comment = username + " sent a " + msg.type + place + ": " + msg.file_name
         slack_client.upload_file(channelname, msg.file_name, filepath, comment)
     else:
         pass
+
+
+@wxbot.register(wxpy.Friend)
+def handle_direct_message(msg: wxpy.Message):
+    if config.botadmin:
+        forward_msg_to_slack(msg, config.botadmin)
+
+
+@wxbot.register(msg_types=wxpy.FRIENDS, enabled=config.auto_accept)
+def handle_friend_request(msg):
+    if config.auto_accept:
+        new_friend = msg.card.accept()
+        new_friend.send("Thanks for adding me.")
 
 
 @wxbot.register(wxpy.Group)
@@ -112,16 +122,11 @@ def handle_msg_all(msg: wxpy.Message):
         groupname = msg.sender.name
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
-            forward_msg_to_slack(msg, channelname)
+            forward_msg_to_slack(msg, channelname, groupname)
         if msg.is_at and config.botadmin:
-            forward_msg_to_slack(msg, config.botadmin)
+            forward_msg_to_slack(msg, config.botadmin, groupname)
 
     except Exception as e:
         logging.exception(e)
 
 
-@wxbot.register(msg_types=wxpy.FRIENDS, enabled=config.auto_accept)
-def auto_accept_friends(msg):
-    if config.auto_accept:
-        new_friend = msg.card.accept()
-        new_friend.send("Thanks for adding me.")
