@@ -6,6 +6,8 @@ config = yaml.load(open('config.yaml').read())
 
 slack_token = config['slack_token']
 
+auto_accept = bool(config['auto_accept']) if 'auto_accept' in config else False
+
 botadmin = config['botadmin'] if 'botadmin' in config else None
 
 if botadmin and not botadmin.startswith("@"):

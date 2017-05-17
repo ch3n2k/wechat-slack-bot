@@ -89,19 +89,17 @@ slack_client = slackbot._client
 
 def forward_msg_to_slack(msg, channelname):
     username = msg.member.name
+    if channelname.startswith('@'):
+        place = " in " + msg.sender.name
+    else:
+        place = ""
     if msg.type == wxpy.TEXT:
-        content = filter_text(msg.text)
-        slack_client.send_message(channelname, username + " said: " + content)
-    elif msg.type == wxpy.PICTURE:
+        content = username + " said" + place + ": " + filter_text(msg.text)
+        slack_client.send_message(channelname, content)
+    elif msg.type == wxpy.PICTURE or msg.type == wxpy.VIDEO or msg.type == wxpy.ATTACHMENT:
         filepath = "temp/" + msg.file_name
         data = msg.get_file(filepath)
-        logging.info("image content data: %r", data)
-        comment = username + " sent a image: " + msg.file_name
-        slack_client.upload_file(channelname, msg.file_name, filepath, comment)
-    elif msg.type == wxpy.VIDEO:
-        filepath = "temp/" + msg.file_name
-        data = msg.get_file(filepath)
-        comment = username + " sent a video: " + msg.file_name
+        comment = username + " sent a " + msg.type + place + ": " + msg.file_name
         slack_client.upload_file(channelname, msg.file_name, filepath, comment)
     else:
         pass
@@ -120,3 +118,10 @@ def handle_msg_all(msg: wxpy.Message):
 
     except Exception as e:
         logging.exception(e)
+
+
+@wxbot.register(msg_types=wxpy.FRIENDS)
+def auto_accept_friends(msg):
+    if config.auto_accept:
+        new_friend = msg.card.accept()
+        new_friend.send("Thanks for adding me.")
