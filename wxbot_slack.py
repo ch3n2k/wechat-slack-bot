@@ -87,17 +87,16 @@ wxbot = wxpy.Bot(console_qr=True, cache_path=True)
 slack_client = slackbot._client
 
 
-def forward_msg_to_slack(msg, channelname, group=None):
-    username = msg.member.name
-    place = ' in ' + group if group else ""
+def forward_msg_to_slack(msg, from_user, to_channel, from_group=None):
+    place = ' in ' + from_group if from_group else ""
     if msg.type == wxpy.TEXT:
-        content = username + " said" + place + ": " + filter_text(msg.text)
-        slack_client.send_message(channelname, content)
+        content = from_user + " said" + place + ": " + filter_text(msg.text)
+        slack_client.send_message(to_channel, content)
     elif msg.type in [wxpy.PICTURE, wxpy.VIDEO, wxpy.ATTACHMENT, wxpy.RECORDING]:
         filepath = "temp/" + msg.file_name
         data = msg.get_file(filepath)
-        comment = username + " sent a " + msg.type + place + ": " + msg.file_name
-        slack_client.upload_file(channelname, msg.file_name, filepath, comment)
+        comment = from_user + " sent a " + msg.type + place + ": " + msg.file_name
+        slack_client.upload_file(to_channel, msg.file_name, filepath, comment)
     else:
         pass
 
@@ -105,7 +104,8 @@ def forward_msg_to_slack(msg, channelname, group=None):
 @wxbot.register(wxpy.Friend)
 def handle_direct_message(msg: wxpy.Message):
     if config.botadmin:
-        forward_msg_to_slack(msg, config.botadmin)
+        logging.info('direct message: %r', msg.sender.name)
+        forward_msg_to_slack(msg, msg.sender.name, config.botadmin)
 
 
 @wxbot.register(msg_types=wxpy.FRIENDS, enabled=config.auto_accept)
@@ -118,13 +118,14 @@ def handle_friend_request(msg):
 @wxbot.register(wxpy.Group)
 def handle_msg_all(msg: wxpy.Message):
     try:
-        logging.info("%r %r", msg.sender.name, msg.member.name)
+        logging.info("group message: %r %r", msg.sender.name, msg.member.name)
         groupname = msg.sender.name
+        username = msg.member.name
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
-            forward_msg_to_slack(msg, channelname, groupname)
+            forward_msg_to_slack(msg, username, channelname, groupname)
         if msg.is_at and config.botadmin:
-            forward_msg_to_slack(msg, config.botadmin, groupname)
+            forward_msg_to_slack(msg, username, config.botadmin, groupname)
 
     except Exception as e:
         logging.exception(e)
