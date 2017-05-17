@@ -120,7 +120,7 @@ def handle_msg_all(msg: wxpy.Message):
         logging.exception(e)
 
 
-@wxbot.register(msg_types=wxpy.FRIENDS)
+@wxbot.register(msg_types=wxpy.FRIENDS, enabled=config.auto_accept)
 def auto_accept_friends(msg):
     if config.auto_accept:
         new_friend = msg.card.accept()

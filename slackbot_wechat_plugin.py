@@ -57,8 +57,10 @@ def send_wechat_file(group_name, filetype, file_path, slackmsg=None):
     if groups:
         if filetype == 'mp4':
             groups[0].send_video(file_path)
-        else:
+        elif filetype in ['png', 'jpg', 'gif']:
             groups[0].send_image(file_path)
+        else:
+            groups[0].send_file(file_path)
     else:
         if slackmsg:
             slackmsg.reply('warning: wechat group not found: %s' % group_name)
