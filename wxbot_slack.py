@@ -104,7 +104,6 @@ def forward_msg_to_slack(msg, channelname):
         #logging.info("video content data: %r", data)
         comment = username + " sent a video: " + msg.file_name
         slack_client.upload_file(channelname, msg.file_name, filepath, comment)
-        pass
     else:
         pass
 
