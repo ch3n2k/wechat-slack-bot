@@ -116,6 +116,7 @@ def command_status(msg):
 
 @respond_to('disable (.*)')
 def command_disable(msg, group_name):
+    group_name = group_name.strip()
     channel_name = get_channel_name(msg)
     if not channel_name:
         msg.reply('use this command in a channel')
@@ -128,6 +129,7 @@ def command_disable(msg, group_name):
 
 @respond_to('sync (.*)')
 def command_sync(msg: Message, group_name):
+    group_name = group_name.strip()
     channel_name = get_channel_name(msg)
     if not channel_name:
         msg.reply('use this command in a channel')
