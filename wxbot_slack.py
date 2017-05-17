@@ -115,7 +115,7 @@ def handle_msg_all(msg: wxpy.Message):
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
             forward_msg_to_slack(msg, channelname)
-        if msg.is_at and hasattr(config, 'botadmin'):
+        if msg.is_at and config.botadmin:
             forward_msg_to_slack(msg, '@' + config.botadmin)
 
     except Exception as e:

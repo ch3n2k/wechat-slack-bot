@@ -6,6 +6,8 @@ config = yaml.load(open('config.yaml').read())
 
 slack_token = config['slack_token']
 
+botadmin = config['botadmin'] if 'botadmin' in config else None
+
 wechat_slack_map = db.get_wechat_mappings()
 
 slack_wechat_map = db.get_slack_mappings()
