@@ -123,7 +123,7 @@ def handle_msg_all(msg: wxpy.Message):
         username = msg.member.name
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
-            forward_msg_to_slack(msg, username, channelname, groupname)
+            forward_msg_to_slack(msg, username, channelname)
         if msg.is_at and config.botadmin:
             forward_msg_to_slack(msg, username, config.botadmin, groupname)
 

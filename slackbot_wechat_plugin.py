@@ -36,43 +36,63 @@ def get_channel_name(message: Message):
     return channel_name
 
 
-def get_username_by_id(message: Message, userid=None):
-    if userid is None:
-        if 'username' in message.body:
-            return message.body['username']
-        elif 'user' in message.body:
-            userid = message.body['user']
-        else:
-            return 'unknown user'
+def get_message_username(message: Message):
+    if 'username' in message.body:
+        return message.body['username']
+    elif 'user' in message.body:
+        return get_username_by_id(message._client, message.body['user'])
+    else:
+        return 'unknown user'
+
+
+def get_username_by_id(client, userid):
     try:
-        username = message._client.users[userid]['name']
+        username = client.users[userid]['name']
     except KeyError:
-        message._client.reconnect()
-        username = message._client.users[userid]['name']
+        client.reconnect()
+        username = client.users[userid]['name']
     return username
 
 
-def send_wechat_file(group_name, filetype, file_path, slackmsg=None):
-    groups = wxbot.groups().search(group_name)
-    if groups:
-        if filetype == 'mp4':
-            groups[0].send_video(file_path)
-        elif filetype in ['png', 'jpg', 'gif']:
-            groups[0].send_image(file_path)
-        else:
-            groups[0].send_file(file_path)
+def get_first(found):
+    if not isinstance(found, list):
+        raise TypeError('expected list, {} found'.format(type(found)))
+    elif not found:
+        raise ValueError('not found')
     else:
-        if slackmsg:
-            slackmsg.reply('warning: wechat group not found: %s' % group_name)
+        return found[0]
 
 
-def send_wechat_text(group_name, text, slackmsg=None):
-    groups = wxbot.groups().search(group_name)
-    if groups:
-        groups[0].send_msg(text)
+def get_group_by_name(group_name):
+    if isinstance(group_name, str):
+        return get_first(wxbot.groups().search(group_name))
     else:
-        if slackmsg:
-            slackmsg.reply('warning: wechat group not found: %s' % group_name)
+        return group_name
+
+
+def send_wechat_file(group, filetype, file_path):
+    group = get_group_by_name(group)
+    if filetype == 'mp4':
+        group.send_video(file_path)
+    elif filetype in ['png', 'jpg', 'gif']:
+        group.send_image(file_path)
+    else:
+        group.send_file(file_path)
+
+
+def send_wechat_text(slack_client, group, text, username=None):
+    group = get_group_by_name(group)
+    if username:
+        group.send_msg('%s said: %s' % (username, filter_content(slack_client, text)))
+    else:
+        group.send_msg('%s' % filter_content(slack_client, text))
+
+
+def send_attachment(slack_client, group, username, attachment):
+    group = get_group_by_name(group)
+    if 'channel_name' in attachment and 'text' in attachment and 'is_share' in attachment and attachment['is_share']:
+        text = '%s forwarded a message in %s: %s' % (username, attachment['channel_name'], filter_content(slack_client, attachment['text']))
+        group.send_msg(text)
 
 
 def filter_emoji(text):
@@ -87,14 +107,21 @@ def filter_emoji(text):
     return re.sub(p, func, text)
 
 
-def filter_content(message: Message):
-    content = message.body['text']
+def filter_content(slack_client, content):
     def func(matchobj):
-        return matchobj.group(1) + get_username_by_id(message, matchobj.group(2)) + matchobj.group(3)
+        return matchobj.group(1) + get_username_by_id(slack_client, matchobj.group(2)) + matchobj.group(3)
 
     content = re.sub(r'(<@)(U[A-Z0-9]*)(>)', func, content)
     content = filter_emoji(content)
     return content
+
+
+def download_and_send_wechat_file(message: Message, group):
+    url = message.body['file']['url_private_download']
+    filetype = message.body['file']['filetype']
+    filepath = 'temp/slack_' + message.body['file']['id'] + "." + filetype
+    download_file(url, filepath)
+    send_wechat_file(group, filetype, filepath)
 
 
 @respond_to('list')
@@ -115,7 +142,7 @@ def command_status(msg):
 
 
 @respond_to('disable (.*)')
-def command_disable(msg, group_name):
+def command_disable(msg: Message, group_name):
     group_name = group_name.strip()
     channel_name = get_channel_name(msg)
     if not channel_name:
@@ -124,7 +151,7 @@ def command_disable(msg, group_name):
         config.del_mapping(group_name=group_name, channel_name=channel_name)
         reply_content = "mapping disabled between %s <> %s" % (group_name, channel_name)
         msg.reply(reply_content)
-        send_wechat_text(group_name, reply_content, msg)
+        send_wechat_text(msg._client, group_name, reply_content)
 
 
 @respond_to('sync (.*)')
@@ -137,7 +164,7 @@ def command_sync(msg: Message, group_name):
         config.set_mapping(group_name=group_name, channel_name=channel_name)
         reply_content = 'mapping established between %s <> %s"' % (group_name, channel_name)
         msg.reply(reply_content)
-        send_wechat_text(group_name, reply_content, msg)
+        send_wechat_text(msg._client, group_name, reply_content)
 
 
 @respond_to('help')
@@ -152,31 +179,26 @@ def my_default_hanlder(message):
     message.reply(USAGE)
 
 
-
-
 @listen_to('.*')
 def any_message(message: Message):
     try:
         logging.info(message.body)
+        slack_client = message._client
         if message.body['type'] == 'message':
             channel_name = get_channel_name(message)
-            username = get_username_by_id(message)
+            username = get_message_username(message)
             logging.info("%s, %s", channel_name, username)
             if channel_name and channel_name in config.slack_wechat_map:
                 group_name = config.slack_wechat_map[channel_name]
-                send_wechat_text(group_name, username + ' said: ' + filter_content(message))
+                group = get_group_by_name(group_name)
+                send_wechat_text(slack_client, group, message.body['text'], username)
                 if 'subtype' in message.body and message.body['subtype'] == 'file_share':
-                    url = message.body['file']['url_private_download']
-                    filetype = message.body['file']['filetype']
-                    filepath = 'temp/slack_' + message.body['file']['id'] + "." + filetype
-                    download_file(url, filepath)
-                    send_wechat_file(group_name, filetype, filepath)
-                else:
-                    logging.error("group name not found in contacts: %s", group_name)
-            else:
-                pass
+                    download_and_send_wechat_file(message, group)
+                if 'attachments' in message.body:
+                    for att in message.body['attachments']:
+                        send_attachment(slack_client, group, username, att)
         else:
-            logging.warning('unable to process the message')
+            logging.warning('unable to process the message type %s', message.body['type'])
     except Exception as e:
         logging.exception(e)
 
