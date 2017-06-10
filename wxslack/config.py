@@ -1,6 +1,6 @@
 import yaml
-import db
 import json
+from . import db
 
 config = yaml.load(open('config.yaml').read())
 
