@@ -157,6 +157,6 @@ def wxbot_main():
         wxbot.register(msg_types=wxpy.FRIENDS, enabled=config.auto_accept)(handle_friend_request)
         wxbot.register(wxpy.Group)(handle_msg_all)
         wxbot.join()
-        time.sleep(5.0)
+        time.sleep(60.0)
 
 

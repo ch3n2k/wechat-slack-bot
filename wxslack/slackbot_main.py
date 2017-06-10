@@ -1,7 +1,7 @@
 import slackbot.settings
 from . import config
 slackbot.settings.PLUGINS = [
-    'slackbot_wechat_plugin',
+    'wxslack.slackbot_wechat_plugin',
 ]
 slackbot.settings.ERRORS_TO = 'wechat-bot-support'
 slackbot.settings.API_TOKEN = config.slack_token
