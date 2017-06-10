@@ -4,15 +4,15 @@
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from wxbot_slack import wxbot
+from wxslack.slackbot_main import slackbot_main
+from wxslack.wxbot_slack import wxbot_main
+from wxpy.utils import start_new_thread
 from wxpy import embed
 
-def wxbot_main():
-    wxbot.join()
 
-from slackbot_main import slackbot_main
+start_new_thread(slackbot_main)
+start_new_thread(wxbot_main)
 
-
-    slackbot_main()
+embed()
 
 

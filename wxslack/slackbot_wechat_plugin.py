@@ -1,14 +1,13 @@
 import logging
-from slackbot.bot import respond_to, default_reply, listen_to
 import re
-
+import requests
+from slackbot.bot import respond_to, default_reply, listen_to
 import slackbot.bot as bot
 from slackbot.dispatcher import Message
 from slackbot.slackclient import Channel
 
-from wxbot_slack import wxbot
-import requests
-import config
+from .wxbot_slack import get_group_by_name
+from . import config
 
 
 class FileDownloadException(Exception): pass
@@ -52,22 +51,6 @@ def get_username_by_id(client, userid):
         client.reconnect()
         username = client.users[userid]['name']
     return username
-
-
-def get_first(found):
-    if not isinstance(found, list):
-        raise TypeError('expected list, {} found'.format(type(found)))
-    elif not found:
-        raise ValueError('not found')
-    else:
-        return found[0]
-
-
-def get_group_by_name(group_name):
-    if isinstance(group_name, str):
-        return get_first(wxbot.groups().search(group_name))
-    else:
-        return group_name
 
 
 def send_wechat_file(group, filetype, file_path):

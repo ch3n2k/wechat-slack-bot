@@ -9,5 +9,5 @@ setup(name='wxslack',
       author_email='ch3n2k@gmail.com',
       url='https://ch3n2k.com',
       packages=['wxslack'],
-      scripts=['script/wxslack'
+      scripts=['script/wxslack']
      )

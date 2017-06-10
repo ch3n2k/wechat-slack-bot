@@ -1,6 +1,5 @@
-import yaml
 import slackbot.settings
-import config
+from . import config
 slackbot.settings.PLUGINS = [
     'slackbot_wechat_plugin',
 ]
