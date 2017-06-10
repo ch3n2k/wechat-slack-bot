@@ -82,8 +82,13 @@ def filter_text(text):
             break
     return text
 
+def logout_handler():
+    global wxbot
+    if config.botadmin:
+        slack_client.send_message(config.botadmin, 'wxbot was kicked off. trying to re-login...')
+    wxbot = wxpy.Bot(console_qr=True, cache_path=True, logout_callback=logout_handler)
 
-wxbot = wxpy.Bot(console_qr=True, cache_path=True)
+wxbot = wxpy.Bot(console_qr=True, cache_path=True) #, logout_callback=logout_handler)
 slack_client = slackbot._client
 
 
