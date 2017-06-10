@@ -199,7 +199,6 @@ def any_message(message: Message):
                         send_attachment(slack_client, group, username, att)
         else:
             logging.warning('unable to process the message type %s', message.body['type'])
-
-    except:
+    except Exception as e:
         message.reply('failed to sync to wechat. check #wechat-bot-support for details')
         raise
