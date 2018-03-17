@@ -7,6 +7,7 @@ import config
 import logging
 import re
 from slackbot_main import slackbot
+import html
 
 emoji_map_table = {
     '[Smile]': u'\U0001f600',
@@ -90,7 +91,7 @@ slack_client = slackbot._client
 def handle_msg_all(msg: wxpy.Message):
     try:
         logging.info("%r", msg)
-        groupname = msg.sender.name
+        groupname = html.unescape(msg.sender.name)
         username = msg.member.name
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
