@@ -1,13 +1,23 @@
 import yaml
-import db
+import json
+from . import db
 
 config = yaml.load(open('config.yaml').read())
 
 slack_token = config['slack_token']
 
+auto_accept = bool(config['auto_accept']) if 'auto_accept' in config else False
+
+botadmin = config['botadmin'] if 'botadmin' in config else None
+
+if botadmin and not botadmin.startswith("@"):
+    botadmin = '@' + botadmin
+
 wechat_slack_map = db.get_wechat_mappings()
 
 slack_wechat_map = db.get_slack_mappings()
+
+emoji_map = {i['short_name']: i['unified'] for i in json.load(open('emoji_pretty.json'))}
 
 
 def set_mapping(group_name, channel_name):

@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # coding: utf-8
-
+import time
 import wxpy
-from slackbot.bot import SlackClient
-import config
 import logging
 import re
-from slackbot_main import slackbot
 import html
+
+from . import config
+from .slackbot_main import slackbot
+
+slack_client = slackbot._client
+wxbot = None
 
 emoji_map_table = {
     '[Smile]': u'\U0001f600',
@@ -84,31 +87,77 @@ def filter_text(text):
     return text
 
 
-wxbot = wxpy.Bot(console_qr=True, cache_path=True)
-slack_client = slackbot._client
+def forward_msg_to_slack(msg, from_user, to_channel, from_group=None):
+    place = ' in ' + from_group if from_group else ""
+    if msg.type == wxpy.TEXT:
+        content = from_user + " said" + place + ": " + filter_text(msg.text)
+        slack_client.send_message(to_channel, content)
+    elif msg.type in [wxpy.PICTURE, wxpy.VIDEO, wxpy.ATTACHMENT, wxpy.RECORDING]:
+        filepath = "temp/" + msg.file_name
+        data = msg.get_file(filepath)
+        comment = from_user + " sent a " + msg.type + place + ": " + msg.file_name
+        slack_client.upload_file(to_channel, msg.file_name, filepath, comment)
+    else:
+        pass
 
-@wxbot.register(wxpy.Group)
+
+def handle_direct_message(msg: wxpy.Message):
+    if config.botadmin:
+        logging.info('direct message: %r', msg.sender.name)
+        forward_msg_to_slack(msg, msg.sender.name, config.botadmin)
+
+
+def handle_friend_request(msg):
+    if config.auto_accept:
+        new_friend = msg.card.accept()
+        new_friend.send("Thanks for adding me.")
+
+
 def handle_msg_all(msg: wxpy.Message):
     try:
-        logging.info("%r", msg)
+        logging.info("group message: %r %r", msg.sender.name, msg.member.name)
         groupname = html.unescape(msg.sender.name)
         username = msg.member.name
         if groupname in config.wechat_slack_map:
             channelname = config.wechat_slack_map[groupname]
-            if msg.type == wxpy.TEXT:
-                content = filter_text(msg.text)
-                slack_client.send_message(channelname, username + " said: " + content)
-            elif msg.type == wxpy.PICTURE:
-                filepath = "temp/" + msg.file_name
-                data = msg.get_file(filepath)
-                logging.info("image content data: %r", data)
-                comment = username + " sent a image: " + msg.file_name
-                slack_client.upload_file(channelname, msg.file_name, filepath, comment)
-            else:
-                # todo: handle other message content types
-                pass
-        else:
-            pass
+            forward_msg_to_slack(msg, username, channelname)
+        if msg.is_at and config.botadmin:
+            forward_msg_to_slack(msg, username, config.botadmin, groupname)
 
     except Exception as e:
         logging.exception(e)
+
+
+def get_first(found):
+    if not isinstance(found, list):
+        raise TypeError('expected list, {} found'.format(type(found)))
+    elif not found:
+        raise ValueError('not found')
+    else:
+        return found[0]
+
+
+class WxbotNotCreatedException(Exception): pass
+
+
+def get_group_by_name(group_name):
+    if isinstance(group_name, str):
+        if wxbot:
+            return get_first(wxbot.groups().search(group_name))
+        else:
+            raise WxbotNotCreatedException()
+    else:
+        return group_name
+
+
+def wxbot_main():
+    while True:
+        global wxbot
+        wxbot = wxpy.Bot(console_qr=True, cache_path=True)
+        wxbot.register(wxpy.Friend)(handle_direct_message)
+        wxbot.register(msg_types=wxpy.FRIENDS, enabled=config.auto_accept)(handle_friend_request)
+        wxbot.register(wxpy.Group)(handle_msg_all)
+        wxbot.join()
+        time.sleep(60.0)
+
+
